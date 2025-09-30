@@ -1,32 +1,34 @@
+// testing_zone/src/design/main.js
 import { initJsPsych } from 'jspsych';
-import 'jspsych/css/jspsych.css'
+import 'jspsych/css/jspsych.css';
 import 'sweetbean/dist/style/main.css';
 import 'sweetbean/dist/style/bandit.css';
 import * as SweetBeanRuntime from 'sweetbean/dist/runtime';
 
 import htmlKeyboardResponse from '@jspsych/plugin-html-keyboard-response';
-import jsPsychRok from '@jspsych-contrib/plugin-rok'
-global.jsPsychRok = jsPsychRok
+import surveyHtmlForm from '@jspsych/plugin-survey-html-form';
 
+// Expose jsPsych + plugins globally
 global.initJsPsych = initJsPsych;
-global.jsPsychHtmlKeyboardResponse = htmlKeyboardResponse
+global.jsPsychHtmlKeyboardResponse = htmlKeyboardResponse;
+global.jsPsychSurveyHtmlForm = surveyHtmlForm;
 
-
-Object.entries(SweetBeanRuntime).forEach(([key, value]) => {
-    global[key] = value;
-});
+// Expose SweetBean runtime classes
+Object.entries(SweetBeanRuntime).forEach(([k, v]) => { global[k] = v; });
 
 /**
- * This is the main function where you program your experiment. For example, you can install jsPsych via node and
- * use functions from there
- * @param id this is a number between 0 and number of participants. You can use it for example to counterbalance between subjects
- * @param condition this is a condition (for example uploaded to the database with the experiment runner in autora)
- * @returns {Promise<*>} after running the experiment for the subject return the observation in this function, it will be uploaded to autora
+ * The AutoRA website shell calls:
+ *   main(participant_id, condition)
+ * We eval the JS experiment code attached to the condition doc and run it.
+ * Must return a JSON string with observations.
  */
-const main = async (id, condition) => {
-    const observation = await eval(condition['experiment_code'] + "\nrunExperiment();");
-    return JSON.stringify(observation)
-}
+const main = async (participant_id, condition) => {
+  // EXACTLY like in the tutorial:
+  const observation = await eval(condition['experiment_code'] + "\nrunExperiment();");
 
+  // Our SweetBean code puts rows on window.__autora_observation__
+  const rows = (global.window && window.__autora_observation__) || observation || [];
+  return JSON.stringify(rows);
+};
 
-export default main
+export default main;
