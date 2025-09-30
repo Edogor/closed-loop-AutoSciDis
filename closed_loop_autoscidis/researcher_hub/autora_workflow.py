@@ -235,6 +235,28 @@ for cycle in range(num_cycles):
     print("Determined experiment conditions.")
 
 # ==============================
+# Save collected data
+# ==============================
+if state.experiment_data is not None and not state.experiment_data.empty:
+    # Save raw data
+    data_filename = f"experiment_data_digit_memory_{num_cycles}cycles_{len(state.experiment_data)}trials.csv"
+    state.experiment_data.to_csv(data_filename, index=False)
+    print(f"\n📊 Saved experimental data to: {data_filename}")
+    
+    # Save aggregated summary
+    agg_data = state.experiment_data.groupby('n_digits').agg({
+        'accuracy': ['count', 'mean', 'std']
+    }).round(4)
+    agg_data.columns = ['n_trials', 'mean_accuracy', 'std_accuracy']
+    summary_filename = f"experiment_summary_digit_memory_{num_cycles}cycles.csv"
+    agg_data.to_csv(summary_filename)
+    print(f"📈 Saved data summary to: {summary_filename}")
+    
+    print(f"\n🎯 Data collection complete! Collected {len(state.experiment_data)} trials across {len(state.experiment_data['n_digits'].unique())} conditions.")
+else:
+    print("\n⚠️  Warning: No experimental data was collected!")
+
+# ==============================
 # Plot (1D)
 # ==============================
 if state.experiment_data is not None and not state.experiment_data.empty and state.models:
@@ -272,3 +294,100 @@ if state.experiment_data is not None and not state.experiment_data.empty and sta
     plt.show()
 else:
     print("No data to plot yet.")
+
+# ==============================
+# Data Analysis Functions
+# ==============================
+def analyze_collected_data(experiment_data: pd.DataFrame):
+    """
+    Analyze and summarize the collected experimental data
+    """
+    if experiment_data is None or experiment_data.empty:
+        print("No data to analyze.")
+        return None
+    
+    print("\n" + "="*50)
+    print("EXPERIMENTAL DATA ANALYSIS")
+    print("="*50)
+    
+    # Basic statistics
+    print(f"Total trials collected: {len(experiment_data)}")
+    print(f"Unique n_digits conditions tested: {sorted(experiment_data['n_digits'].unique())}")
+    print(f"Overall accuracy: {experiment_data['accuracy'].mean():.3f} ± {experiment_data['accuracy'].std():.3f}")
+    
+    # Per-condition analysis
+    print("\nPer-condition results:")
+    summary = experiment_data.groupby('n_digits').agg({
+        'accuracy': ['count', 'mean', 'std']
+    }).round(3)
+    summary.columns = ['n_trials', 'mean_accuracy', 'std_accuracy']
+    print(summary)
+    
+    # Check for sufficient data per condition
+    print("\nData sufficiency check:")
+    min_trials_per_condition = 3
+    sufficient_data = summary[summary['n_trials'] >= min_trials_per_condition]
+    insufficient_data = summary[summary['n_trials'] < min_trials_per_condition]
+    
+    if len(sufficient_data) > 0:
+        print(f"✅ {len(sufficient_data)} conditions have sufficient data (≥{min_trials_per_condition} trials)")
+    if len(insufficient_data) > 0:
+        print(f"⚠️  {len(insufficient_data)} conditions have insufficient data (<{min_trials_per_condition} trials):")
+        for n_digits in insufficient_data.index:
+            print(f"   n_digits={n_digits}: {insufficient_data.loc[n_digits, 'n_trials']} trials")
+    
+    return summary
+
+
+def save_data_with_metadata(experiment_data: pd.DataFrame, models: list, metadata: dict = None):
+    """
+    Save experimental data with metadata about the experiment
+    """
+    import json
+    from datetime import datetime
+    
+    if experiment_data is None or experiment_data.empty:
+        print("No data to save.")
+        return
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Save data
+    data_filename = f"digit_memory_experiment_{timestamp}.csv"
+    experiment_data.to_csv(data_filename, index=False)
+    
+    # Save metadata
+    metadata_dict = {
+        "timestamp": timestamp,
+        "total_trials": len(experiment_data),
+        "unique_conditions": experiment_data['n_digits'].unique().tolist(),
+        "overall_accuracy": float(experiment_data['accuracy'].mean()),
+        "models_fitted": len(models),
+        "data_filename": data_filename
+    }
+    
+    if metadata:
+        metadata_dict.update(metadata)
+    
+    metadata_filename = f"digit_memory_metadata_{timestamp}.json"
+    with open(metadata_filename, 'w') as f:
+        json.dump(metadata_dict, f, indent=2)
+    
+    print(f"💾 Saved data to: {data_filename}")
+    print(f"📋 Saved metadata to: {metadata_filename}")
+    
+    return data_filename, metadata_filename
+
+# Analyze the final collected data
+analyze_collected_data(state.experiment_data)
+
+# Save data with comprehensive metadata
+if state.experiment_data is not None and not state.experiment_data.empty:
+    experiment_metadata = {
+        "num_cycles": num_cycles,
+        "num_trials_per_condition": num_trials,
+        "num_conditions_per_cycle": num_conditions_per_cycle,
+        "n_digits_levels": N_DIGITS_LEVELS,
+        "preprocessing_function": "digit_memory_trial_list_to_experiment_data"
+    }
+    save_data_with_metadata(state.experiment_data, state.models, experiment_metadata)
