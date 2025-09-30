@@ -43,3 +43,52 @@ def trial_list_to_experiment_data(trial_sequence):
     experiment_data = pd.DataFrame(results_dict)
 
     return experiment_data
+
+
+def digit_memory_trial_list_to_experiment_data(trial_sequence):
+    """
+    Parse a digit memory trial sequence into dependent and independent variables
+    
+    independent variables: n_digits
+    dependent variables: accuracy
+    """
+    
+    # define dictionary to store the results
+    results_dict = {
+        'n_digits': [],
+        'accuracy': []
+    }
+    
+    for trial in trial_sequence:
+        # Handle different possible trial data structures
+        n_digits = None
+        correct = None
+        
+        # Try to extract n_digits from various possible locations
+        if 'n_digits' in trial:
+            n_digits = trial['n_digits']
+        elif 'data' in trial and isinstance(trial['data'], dict) and 'n_digits' in trial['data']:
+            n_digits = trial['data']['n_digits']
+        
+        # Try to extract correct/accuracy from various possible locations
+        if 'correct' in trial:
+            correct = trial['correct']
+        elif 'data' in trial and isinstance(trial['data'], dict) and 'correct' in trial['data']:
+            correct = trial['data']['correct']
+        elif 'accuracy' in trial:
+            correct = trial['accuracy']
+        
+        # Only add to results if we have both n_digits and correct values
+        if n_digits is not None and correct is not None:
+            # Ensure proper data types
+            try:
+                results_dict['n_digits'].append(int(n_digits))
+                results_dict['accuracy'].append(float(1.0 if correct else 0.0))
+            except (ValueError, TypeError):
+                print(f"Warning: Could not parse trial data: n_digits={n_digits}, correct={correct}")
+                continue
+    
+    # convert dictionary to pandas dataframe
+    experiment_data = pd.DataFrame(results_dict)
+    
+    return experiment_data

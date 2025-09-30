@@ -48,6 +48,9 @@ from experiment_digit_memory import (
     stimulus_sequence as dm_stimulus_sequence,
 )
 
+# --- Import preprocessing functions
+from preprocessing import digit_memory_trial_list_to_experiment_data
+
 # ==============================
 # Parameters
 # ==============================
@@ -138,6 +141,7 @@ def runner_on_state(conditions: pd.DataFrame):
             print("Warning: could not JSON-decode runner item; skipping.")
             continue
 
+        # Handle different data structures that Firebase might return
         if isinstance(payload, dict) and "trials" in payload:
             trials = payload["trials"]
         elif isinstance(payload, list):
@@ -145,10 +149,12 @@ def runner_on_state(conditions: pd.DataFrame):
         else:
             trials = payload.get("observation", [])
 
-        for t in trials:
-            n = int(t.get("n_digits"))
-            correct = bool(t.get("correct"))
-            rows.append({"n_digits": n, "accuracy": 1.0 if correct else 0.0})
+        # Use the digit memory preprocessing function
+        if trials:
+            processed_data = digit_memory_trial_list_to_experiment_data(trials)
+            # Convert DataFrame to list of dictionaries and extend rows
+            if not processed_data.empty:
+                rows.extend(processed_data.to_dict('records'))
 
     exp_df = (
         pd.DataFrame(rows).astype({"n_digits": int, "accuracy": float})
