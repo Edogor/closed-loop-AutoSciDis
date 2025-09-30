@@ -104,10 +104,11 @@ def initialize_state(allowed_conditions: pd.DataFrame, num_samples: int):
     return Delta(conditions=conds)
 
 @on_state()
-def runner_on_state(conditions: pd.DataFrame):
+def runner_on_state(conditions: pd.DataFrame, experiment_data: pd.DataFrame = None):
     """
     Build one JS experiment per condition (n_digits), run it via Firebase,
     and parse observations into tidy (n_digits, accuracy) rows.
+    Accumulates data with existing experiment_data if present.
     """
     js_payloads: List[str] = []
     for _, row in conditions.iterrows():
@@ -156,12 +157,26 @@ def runner_on_state(conditions: pd.DataFrame):
             if not processed_data.empty:
                 rows.extend(processed_data.to_dict('records'))
 
-    exp_df = (
+    new_exp_df = (
         pd.DataFrame(rows).astype({"n_digits": int, "accuracy": float})
         if rows else pd.DataFrame(columns=["n_digits", "accuracy"])
     )
-    print(f"Preprocessed experimental data: {len(exp_df)} rows.")
-    return Delta(experiment_data=exp_df)
+    
+    # Accumulate with existing experiment data
+    if experiment_data is not None and not experiment_data.empty:
+        combined_df = pd.concat([experiment_data, new_exp_df], ignore_index=True)
+        # Remove any potential duplicate rows (same n_digits and accuracy at same time)
+        # but keep legitimate repeated experiments
+        print(f"Accumulated experimental data: {len(new_exp_df)} new + {len(experiment_data)} existing = {len(combined_df)} total rows.")
+    else:
+        combined_df = new_exp_df
+        print(f"Preprocessed experimental data: {len(combined_df)} rows.")
+    
+    # Ensure the data types are correct
+    if not combined_df.empty:
+        combined_df = combined_df.astype({"n_digits": int, "accuracy": float})
+    
+    return Delta(experiment_data=combined_df)
 
 @on_state()
 def theorist_on_state(experiment_data: pd.DataFrame, variables: VariableCollection):
