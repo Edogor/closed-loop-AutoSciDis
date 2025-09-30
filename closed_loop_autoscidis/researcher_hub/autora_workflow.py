@@ -225,14 +225,23 @@ for cycle in range(num_cycles):
     state = theorist_on_state(state)
     print("Fitted models.")
 
+    # Check if we have enough models for model disagreement
     models_to_compare = state.models[-3:] if len(state.models) >= 3 else state.models
-    state = experimentalist_on_state(
-        state,
-        allowed_conditions=allowed_conditions,
-        models_to_compare=models_to_compare,
-        num_samples=num_conditions_per_cycle
-    )
-    print("Determined experiment conditions.")
+    if len(models_to_compare) >= 2:
+        # Use model disagreement when we have at least 2 models
+        state = experimentalist_on_state(
+            state,
+            allowed_conditions=allowed_conditions,
+            models_to_compare=models_to_compare,
+            num_samples=num_conditions_per_cycle
+        )
+        print("Determined experiment conditions using model disagreement.")
+    else:
+        # Fall back to random sampling when we don't have enough models
+        print(f"Not enough models ({len(models_to_compare)}) for model disagreement; using random sampling.")
+        next_conditions = random_sample(allowed_conditions, num_conditions_per_cycle)
+        state = state.update(conditions=next_conditions)
+        print("Determined experiment conditions using random sampling.")
 
 # ==============================
 # Save collected data
