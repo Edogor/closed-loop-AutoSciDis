@@ -240,7 +240,7 @@ for cycle in range(num_cycles):
         # Fall back to random sampling when we don't have enough models
         print(f"Not enough models ({len(models_to_compare)}) for model disagreement; using random sampling.")
         next_conditions = random_sample(allowed_conditions, num_conditions_per_cycle)
-        state = state.update(conditions=next_conditions)
+        state = state + Delta(conditions=next_conditions)
         print("Determined experiment conditions using random sampling.")
 
 # ==============================
