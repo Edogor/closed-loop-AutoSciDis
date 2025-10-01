@@ -53,16 +53,21 @@ def digit_memory_trial_list_to_experiment_data(trial_sequence):
     dependent variables: accuracy
     """
     
+    print(f"\n=== DEBUG: digit_memory_trial_list_to_experiment_data called with {len(trial_sequence) if isinstance(trial_sequence, list) else 'non-list'} items ===")
+    
     # define dictionary to store the results
     results_dict = {
         'n_digits': [],
         'accuracy': []
     }
     
-    for trial in trial_sequence:
+    for idx, trial in enumerate(trial_sequence):
         # Handle different possible trial data structures
         n_digits = None
         correct = None
+        
+        if idx < 3:  # Only print details for first few trials to avoid spam
+            print(f"  Trial {idx}: {trial}")
         
         # Try to extract n_digits from various possible locations
         if 'n_digits' in trial:
@@ -84,9 +89,16 @@ def digit_memory_trial_list_to_experiment_data(trial_sequence):
             try:
                 results_dict['n_digits'].append(int(n_digits))
                 results_dict['accuracy'].append(float(1.0 if correct else 0.0))
-            except (ValueError, TypeError):
-                print(f"Warning: Could not parse trial data: n_digits={n_digits}, correct={correct}")
+                if idx < 3:
+                    print(f"    ✓ Extracted: n_digits={n_digits}, correct={correct}")
+            except (ValueError, TypeError) as e:
+                print(f"Warning: Could not parse trial data: n_digits={n_digits}, correct={correct}, error={e}")
                 continue
+        else:
+            if idx < 3:
+                print(f"    ✗ Missing data: n_digits={n_digits}, correct={correct}")
+    
+    print(f"=== DEBUG: Extracted {len(results_dict['n_digits'])} valid trials ===")
     
     # convert dictionary to pandas dataframe
     experiment_data = pd.DataFrame(results_dict)

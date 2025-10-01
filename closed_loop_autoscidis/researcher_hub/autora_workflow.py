@@ -127,35 +127,59 @@ def runner_on_state(conditions: pd.DataFrame, experiment_data: pd.DataFrame = No
     cred_path = pathlib.Path(__file__).with_name("firebase-service-account.json")
     firebase_credentials = json.loads(cred_path.read_text(encoding="utf-8"))
 
-    runner = firebase_runner(firebase_credentials=firebase_credentials, time_out=5, sleep_time=3)
+    runner = firebase_runner(firebase_credentials=firebase_credentials, time_out=300, sleep_time=5)
 
     print("Uploading the experiment to Firebase and waiting for data...")
     data_raw: List[str] = runner(to_send)
     print("Collected experimental data.")
+    
+    # DEBUG: Log what we received from Firebase
+    print(f"\n=== DEBUG: Firebase returned {len(data_raw)} items ===")
+    for idx, item in enumerate(data_raw):
+        print(f"Item {idx}: type={type(item)}, length={len(item) if isinstance(item, str) else 'N/A'}")
+        if isinstance(item, str):
+            print(f"  First 200 chars: {item[:200]}")
 
     # Parse observations
     rows: List[Dict[str, Any]] = []
     for item in data_raw:
         try:
             payload = json.loads(item)
-        except Exception:
-            print("Warning: could not JSON-decode runner item; skipping.")
+            print(f"\n=== DEBUG: Parsed payload type: {type(payload)} ===")
+            if isinstance(payload, dict):
+                print(f"  Payload keys: {list(payload.keys())}")
+            elif isinstance(payload, list):
+                print(f"  Payload is list with {len(payload)} items")
+                if len(payload) > 0:
+                    print(f"  First item type: {type(payload[0])}")
+                    if isinstance(payload[0], dict):
+                        print(f"  First item keys: {list(payload[0].keys())}")
+        except Exception as e:
+            print(f"Warning: could not JSON-decode runner item; skipping. Error: {e}")
             continue
 
         # Handle different data structures that Firebase might return
         if isinstance(payload, dict) and "trials" in payload:
             trials = payload["trials"]
+            print(f"=== DEBUG: Found 'trials' key with {len(trials)} trials ===")
         elif isinstance(payload, list):
             trials = payload
+            print(f"=== DEBUG: Using payload directly as trials list ({len(trials)} items) ===")
         else:
             trials = payload.get("observation", [])
+            print(f"=== DEBUG: Using 'observation' key with {len(trials)} trials ===")
 
         # Use the digit memory preprocessing function
         if trials:
+            print(f"=== DEBUG: Processing {len(trials)} trials ===")
+            if len(trials) > 0:
+                print(f"  First trial: {trials[0]}")
             processed_data = digit_memory_trial_list_to_experiment_data(trials)
+            print(f"=== DEBUG: Preprocessing result: {len(processed_data)} rows ===")
             # Convert DataFrame to list of dictionaries and extend rows
             if not processed_data.empty:
                 rows.extend(processed_data.to_dict('records'))
+                print(f"=== DEBUG: Total rows accumulated: {len(rows)} ===")
 
     new_exp_df = (
         pd.DataFrame(rows).astype({"n_digits": int, "accuracy": float})
