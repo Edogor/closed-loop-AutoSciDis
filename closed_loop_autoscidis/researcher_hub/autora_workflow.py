@@ -186,6 +186,33 @@ def runner_on_state(conditions: pd.DataFrame, experiment_data: pd.DataFrame = No
         if rows else pd.DataFrame(columns=["n_digits", "accuracy"])
     )
     
+    # Provide clear feedback about data collection
+    if len(rows) == 0:
+        print("\n" + "="*70)
+        print("⚠️  WARNING: No experimental data was collected!")
+        print("="*70)
+        print("\nPossible reasons:")
+        print("1. No participants have completed the experiment yet")
+        print("   → Check your Firebase console to see if conditions were uploaded")
+        print("   → Participants need to visit the testing zone URL to complete experiments")
+        print("   → Make sure the testing zone is deployed and accessible")
+        print("2. The timeout might still be too short for participants to complete")
+        print(f"   → Current timeout: 300 seconds (5 minutes)")
+        print("3. Firebase connection issues")
+        print("   → Verify firebase-service-account.json is correct")
+        print("   → Check Firebase console for any errors")
+        print("4. Data structure mismatch")
+        print("   → Check Firebase console to see what data is stored")
+        print("   → The data should be in 'observations' collection")
+        print("\nTo manually test:")
+        print("1. Deploy the testing zone: cd testing_zone && npm run build && firebase deploy")
+        print("2. Visit the testing zone URL in your browser")
+        print("3. Complete an experiment")
+        print("4. Check Firebase console for the observation data")
+        print("="*70 + "\n")
+    else:
+        print(f"✓ Successfully collected {len(rows)} trials from Firebase")
+    
     # Accumulate with existing experiment data
     if experiment_data is not None and not experiment_data.empty:
         combined_df = pd.concat([experiment_data, new_exp_df], ignore_index=True)
@@ -236,6 +263,18 @@ def experimentalist_on_state(allowed_conditions: pd.DataFrame,
 # ==============================
 # Closed-loop Execution
 # ==============================
+print("\n" + "="*70)
+print("🔬 AutoRA Digit Memory Experiment Workflow")
+print("="*70)
+print(f"Configuration:")
+print(f"  - Cycles: {num_cycles}")
+print(f"  - Trials per condition: {num_trials}")
+print(f"  - Conditions per cycle: {num_conditions_per_cycle}")
+print(f"  - N-digits levels: {N_DIGITS_LEVELS}")
+print(f"  - Firebase timeout: 300 seconds (5 minutes)")
+print(f"  - Total expected trials: {num_cycles * num_conditions_per_cycle * num_trials}")
+print("="*70 + "\n")
+
 state = initialize_state(
     state,
     allowed_conditions=allowed_conditions,
