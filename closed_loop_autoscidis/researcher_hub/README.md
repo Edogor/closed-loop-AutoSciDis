@@ -47,6 +47,23 @@ This will check:
 
 If all checks pass, you can proceed to run the workflow.
 
+### Test Data Pipeline (Optional)
+
+To test the data processing pipeline without Firebase or participants:
+
+```shell
+python test_pipeline.py
+```
+
+This generates mock data and verifies:
+- Mock data generation
+- JSON parsing
+- Data preprocessing
+- Data types
+- Edge case handling
+
+Useful for understanding how data flows through the system.
+
 ### Write your code
 
 The autora_workflow.py file shows a basic example on how to run a closed loop autora experiment. Navigate [here](https://autoresearch.github.io/autora/) for more advanced options.
