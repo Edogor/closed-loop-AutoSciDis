@@ -1,1 +1,15 @@
-.venvclosed_loop_autoscidis/researcher_hub/firebase-service-account.json
+.venv
+closed_loop_autoscidis/researcher_hub/firebase-service-account.json
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+node_modules
+.DS_Store
+*.log
