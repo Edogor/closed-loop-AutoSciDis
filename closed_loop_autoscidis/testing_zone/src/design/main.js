@@ -5,11 +5,13 @@ import 'sweetbean/dist/style/bandit.css';
 import * as SweetBeanRuntime from 'sweetbean/dist/runtime';
 
 import htmlKeyboardResponse from '@jspsych/plugin-html-keyboard-response';
+import surveyHtmlForm from '@jspsych/plugin-survey-html-form';
 import jsPsychRok from '@jspsych-contrib/plugin-rok'
-global.jsPsychRok = jsPsychRok
 
+global.jsPsychRok = jsPsychRok
 global.initJsPsych = initJsPsych;
 global.jsPsychHtmlKeyboardResponse = htmlKeyboardResponse
+global.jsPsychSurveyHtmlForm = surveyHtmlForm
 
 
 Object.entries(SweetBeanRuntime).forEach(([key, value]) => {

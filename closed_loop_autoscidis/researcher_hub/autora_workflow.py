@@ -1,7 +1,7 @@
 """
-Basic Workflow
-    Two Independent Variables, One Dependent Variable
-    Theorist: Nuts (yours), Bayesian Machine Scientist, Logistic Regression
+Basic Workflow — Digit Memory
+    One Independent Variable (n_digits), One Dependent Variable (accuracy)
+    Theorist: Nuts, Bayesian Machine Scientist, Logistic Regression
     Experimentalist: Random init + Model Disagreement
     Runner: Firebase Runner (no prolific recruitment)
 """
@@ -23,9 +23,9 @@ from autora.state import StandardState, on_state, Delta
 from sklearn.linear_model import LogisticRegression
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-from trial_sequence import trial_sequence
-from stimulus_sequence import stimulus_sequence
-from preprocessing import trial_list_to_experiment_data
+from experiment_digit_memory import trial_sequence as dm_trial_sequence
+from experiment_digit_memory import stimulus_sequence as dm_stimulus_sequence
+from preprocessing import digit_memory_to_experiment_data
 
 # --- Nuts theorist import (handles both export names) ---
 try:
@@ -64,24 +64,20 @@ np.seterr(all="ignore")
 
 # ------------- Study parameters -------------
 num_cycles = 2
-num_trials = 10
-num_conditions_per_cycle = 2
+num_trials = 4  # trials per experiment run
+num_conditions_per_cycle = 1  # distinct n_digits conditions per cycle
+N_DIGITS_LEVELS = list(range(3, 10))  # 3..9
 
 
 # ------------- Variables / design space -------------
 variables = VariableCollection(
     independent_variables=[
-        Variable(name="dots_left", allowed_values=np.linspace(1, 100, 100)),
-        Variable(name="dots_right", allowed_values=np.linspace(1, 100, 100)),
+        Variable(name="n_digits", allowed_values=N_DIGITS_LEVELS),
     ],
     dependent_variables=[Variable(name="accuracy", value_range=(0, 1))],
 )
 
 allowed_conditions = grid_pool(variables)
-# remove equal-dot conditions
-allowed_conditions = allowed_conditions[
-    allowed_conditions["dots_left"] != allowed_conditions["dots_right"]
-].reset_index(drop=True)
 
 
 # ------------- State -------------
@@ -164,12 +160,12 @@ experiment_runner = firebase_runner(
 def runner_on_state(conditions):
     res = []
     for _, c in conditions.iterrows():
-        iv_1 = c["dots_left"]
-        iv_2 = c["dots_right"]
-        timeline = trial_sequence(iv_1, iv_2, num_trials)
-        print("Generated counterbalanced trial sequence.")
-        js_code = stimulus_sequence(timeline)
-        print("Compiled experiment.")
+        n_digits = int(c["n_digits"])
+        # Generate digit memory trial sequence
+        timeline = dm_trial_sequence(number_of_trials=num_trials, n_levels=[n_digits])
+        print(f"Generated counterbalanced trial sequence for n_digits={n_digits}.")
+        js_code = dm_stimulus_sequence(timeline)
+        print(f"Compiled experiment for n_digits={n_digits}.")
         res.append(js_code)
 
     conditions_to_send = conditions.copy()
@@ -183,7 +179,7 @@ def runner_on_state(conditions):
     experiment_data = pd.DataFrame()
     for item in data_raw:
         _lst = json.loads(item)["trials"]
-        _df = trial_list_to_experiment_data(_lst)
+        _df = digit_memory_to_experiment_data(_lst)
         experiment_data = pd.concat([experiment_data, _df], axis=0)
 
     experiment_data = experiment_data.reset_index(drop=True)
@@ -212,55 +208,65 @@ for _ in range(num_cycles):
     print("Determined experiment conditions.")
 
 
-# ------------- Plot (3 panels: LR, BMS, Nuts) -------------
+# ------------- Plot (1D: n_digits vs accuracy) -------------
 ivs = [iv.name for iv in variables.independent_variables]
 dvs = [dv.name for dv in variables.dependent_variables]
 X = state.experiment_data[ivs]
 y = state.experiment_data[dvs]
 
-iv1_range = variables.independent_variables[0].allowed_values
-iv2_range = variables.independent_variables[1].allowed_values
-iv1_grid, iv2_grid = np.meshgrid(iv1_range, iv2_range)
-iv_grid = np.c_[iv1_grid.ravel(), iv2_grid.ravel()]
+# Aggregate data by n_digits (mean accuracy)
+agg = state.experiment_data.groupby('n_digits')['accuracy'].mean().reset_index()
+
+# Create a grid for predictions
+iv_range = variables.independent_variables[0].allowed_values
+iv_grid = pd.DataFrame({'n_digits': iv_range})
 
 # retrieve in the order we stored them: [Nuts, BMS, LR]
 model_nuts, model_bms, model_lr = state.models[-3], state.models[-2], state.models[-1]
 
-def _ensure_grid_pred(model):
-    pred = model.predict(iv_grid)
-    pred = np.asarray(pred).reshape(iv1_grid.shape)
-    return pred
+# Get predictions
+dv_pred_lr = model_lr.predict(iv_grid).ravel()
+dv_pred_bms = model_bms.predict(iv_grid).ravel()
+dv_pred_nuts = model_nuts.predict(iv_grid).ravel()
 
-dv_pred_lr   = _ensure_grid_pred(model_lr)
-dv_pred_bms  = _ensure_grid_pred(model_bms)
-dv_pred_nuts = _ensure_grid_pred(model_nuts)
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
 
-fig = plt.figure(figsize=(18, 5))
+# Plot 1: Logistic Regression
+ax1.scatter(agg['n_digits'], agg['accuracy'], color='red', s=100, label='Data', zorder=3)
+ax1.plot(iv_grid['n_digits'], dv_pred_lr, 'b-', linewidth=2, label='Model')
+ax1.set_xlabel('Number of Digits', fontsize=12)
+ax1.set_ylabel('Accuracy', fontsize=12)
+ax1.set_ylim(-0.1, 1.1)
+ax1.set_title('Logistic Regression', fontsize=14)
+ax1.legend()
+ax1.grid(True, alpha=0.3)
 
-ax1 = fig.add_subplot(131, projection="3d")
-ax1.scatter(X["dots_left"], X["dots_right"], y, color="red", label="Data")
-ax1.plot_surface(iv1_grid, iv2_grid, dv_pred_lr, cmap="viridis", alpha=0.6)
-ax1.set_xlabel("dots_left"); ax1.set_ylabel("dots_right"); ax1.set_zlabel("Accuracy"); ax1.set_zlim(0, 1)
-ax1.set_title("Logistic Regression")
-
-ax2 = fig.add_subplot(132, projection="3d")
-ax2.scatter(X["dots_left"], X["dots_right"], y, color="red", label="Data")
-ax2.plot_surface(iv1_grid, iv2_grid, dv_pred_bms, cmap="viridis", alpha=0.6)
-ax2.set_xlabel("dots_left"); ax2.set_ylabel("dots_right"); ax2.set_zlabel("Accuracy"); ax2.set_zlim(0, 1)
+# Plot 2: BMS
+ax2.scatter(agg['n_digits'], agg['accuracy'], color='red', s=100, label='Data', zorder=3)
+ax2.plot(iv_grid['n_digits'], dv_pred_bms, 'b-', linewidth=2, label='Model')
+ax2.set_xlabel('Number of Digits', fontsize=12)
+ax2.set_ylabel('Accuracy', fontsize=12)
+ax2.set_ylim(-0.1, 1.1)
 try:
-    ax2.set_title("BMS: " + model_bms.repr())
+    ax2.set_title(f"BMS: {model_bms.repr()}", fontsize=14)
 except Exception:
-    ax2.set_title("BMS")
+    ax2.set_title("BMS", fontsize=14)
+ax2.legend()
+ax2.grid(True, alpha=0.3)
 
-ax3 = fig.add_subplot(133, projection="3d")
-ax3.scatter(X["dots_left"], X["dots_right"], y, color="red", label="Data")
-ax3.plot_surface(iv1_grid, iv2_grid, dv_pred_nuts, cmap="viridis", alpha=0.6)
-ax3.set_xlabel("dots_left"); ax3.set_ylabel("dots_right"); ax3.set_zlabel("Accuracy"); ax3.set_zlim(0, 1)
+# Plot 3: Nuts
+ax3.scatter(agg['n_digits'], agg['accuracy'], color='red', s=100, label='Data', zorder=3)
+ax3.plot(iv_grid['n_digits'], dv_pred_nuts, 'b-', linewidth=2, label='Model')
+ax3.set_xlabel('Number of Digits', fontsize=12)
+ax3.set_ylabel('Accuracy', fontsize=12)
+ax3.set_ylim(-0.1, 1.1)
 try:
     title = getattr(model_nuts, "print_eqn", lambda: "")() or "Nuts"
-    ax3.set_title(str(title) if isinstance(title, str) else "Nuts")
+    ax3.set_title(str(title) if isinstance(title, str) else "Nuts", fontsize=14)
 except Exception:
-    ax3.set_title("Nuts")
+    ax3.set_title("Nuts", fontsize=14)
+ax3.legend()
+ax3.grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig("model_comparison.png", dpi=160)

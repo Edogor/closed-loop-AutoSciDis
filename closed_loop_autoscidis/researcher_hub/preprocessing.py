@@ -43,3 +43,30 @@ def trial_list_to_experiment_data(trial_sequence):
     experiment_data = pd.DataFrame(results_dict)
 
     return experiment_data
+
+
+def digit_memory_to_experiment_data(trial_sequence):
+    """
+    Parse a digit memory trial sequence into dependent and independent variables
+    
+    independent variable: n_digits
+    dependent: accuracy (0 or 1)
+    """
+    results_dict = {
+        'n_digits': [],
+        'accuracy': []
+    }
+    
+    for trial in trial_sequence:
+        # Only process trials that have the required fields
+        if 'n_digits' not in trial or 'correct' not in trial:
+            continue
+        
+        n_digits = int(trial['n_digits'])
+        correct = bool(trial['correct'])
+        
+        results_dict['n_digits'].append(n_digits)
+        results_dict['accuracy'].append(1.0 if correct else 0.0)
+    
+    experiment_data = pd.DataFrame(results_dict)
+    return experiment_data
