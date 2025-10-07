@@ -1,3 +1,4 @@
+# LEGACY: dots experiment (not used by the digit-memory workflow)
 from sweetpea import Factor, MinimumTrials, CrossBlock, synthesize_trials, CMSGen, experiments_to_dicts
 
 def trial_sequence(num_dots_1, num_dots_2, min_trials):

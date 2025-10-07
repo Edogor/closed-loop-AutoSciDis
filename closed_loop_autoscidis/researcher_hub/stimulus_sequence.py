@@ -1,3 +1,4 @@
+# LEGACY: dots experiment (not used by the digit-memory workflow)
 from sweetbean.stimulus import Text, Fixation, RandomDotPatterns
 from sweetbean import Block, Experiment
 from sweetbean.variable import TimelineVariable

@@ -198,7 +198,7 @@ for _ in range(num_cycles):
     print("Finished data collection and preprocessing.")
     state = theorist_on_state(state)
     print("Fitted models.")
-    models_to_compare = [state.models[-1], state.models[-2], state.models[-3]]
+    models_to_compare = state.models
     state = experimentalist_on_state(
         state,
         allowed_conditions=allowed_conditions,
@@ -222,7 +222,7 @@ iv_range = variables.independent_variables[0].allowed_values
 iv_grid = pd.DataFrame({'n_digits': iv_range})
 
 # retrieve in the order we stored them: [Nuts, BMS, LR]
-model_nuts, model_bms, model_lr = state.models[-3], state.models[-2], state.models[-1]
+model_nuts, model_bms, model_lr = state.models
 
 # Get predictions
 dv_pred_lr = model_lr.predict(iv_grid).ravel()

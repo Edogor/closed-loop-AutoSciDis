@@ -1,5 +1,6 @@
 import pandas as pd
 
+# LEGACY (dots experiment) – not used in digit-memory workflow
 def trial_list_to_experiment_data(trial_sequence):
     """
     Parse a trial sequence (from jsPsych) into dependent and independent variables
