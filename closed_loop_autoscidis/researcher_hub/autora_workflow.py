@@ -32,14 +32,15 @@ except Exception:
     from autora.theorist.nuts import NutsTheorists as NutsRegressor  # fallback
 
 # ---- Always use nuts experimentalist ----
-from autora.experimentalist.nuts import nuts_sample as _nuts_sample
+from autora.experimentalist.nuts import sample as _nuts_sample
 
 def pick_conditions(allowed, existing, ivs, models, k):
+    print("[nuts experimentalist] Selecting conditions using nuts experimentalist.")
     return _nuts_sample(
-        allowed_conditions=allowed,
-        existing_conditions=existing,
-        num_samples=k,
-        feature_cols=ivs,
+        conditions=allowed,
+        models=models,
+        reference_conditions=existing,
+        num_samples=k
     )
 
 
@@ -118,7 +119,7 @@ def theorist_on_state(experiment_data, variables):
 def initialize_state(allowed_conditions, num_samples, variables):
     ivs = [iv.name for iv in variables.independent_variables]
     existing = pd.DataFrame(columns=ivs)
-    chosen = pick_conditions(allowed_conditions, existing, ivs, None, num_samples)
+    chosen = pick_conditions(allowed_conditions, existing, ivs, [], num_samples)
     return Delta(conditions=chosen.reset_index(drop=True))
 
 @on_state()
