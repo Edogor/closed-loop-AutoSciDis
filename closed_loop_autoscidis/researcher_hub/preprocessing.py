@@ -1,4 +1,5 @@
 import pandas as pd
+import textdistance
 
 def trial_list_to_experiment_data(trial_sequence):
     """
@@ -50,7 +51,7 @@ def digit_memory_to_experiment_data(trial_sequence):
     Parse a digit memory trial sequence into dependent and independent variables
     
     independent variable: n_digits
-    dependent: accuracy (0 or 1)
+    dependent: accuracy (normalized Damerau-Levenshtein similarity between 0 and 1)
     """
     results_dict = {
         'n_digits': [],
@@ -59,14 +60,22 @@ def digit_memory_to_experiment_data(trial_sequence):
     
     for trial in trial_sequence:
         # Only process trials that have the required fields
-        if 'n_digits' not in trial or 'correct' not in trial:
+        if 'n_digits' not in trial:
             continue
         
         n_digits = int(trial['n_digits'])
-        correct = bool(trial['correct'])
+        
+        # Get shown and response strings for similarity calculation
+        shown = str(trial.get('shown', ''))
+        response = str(trial.get('response', ''))
+        
+        # Calculate normalized Damerau-Levenshtein similarity
+        # The textdistance.damerau_levenshtein.normalized_similarity returns a value between 0 and 1
+        # where 1 means identical strings and 0 means completely different
+        similarity = textdistance.damerau_levenshtein.normalized_similarity(shown, response)
         
         results_dict['n_digits'].append(n_digits)
-        results_dict['accuracy'].append(1.0 if correct else 0.0)
+        results_dict['accuracy'].append(float(similarity))
     
     experiment_data = pd.DataFrame(results_dict)
     return experiment_data

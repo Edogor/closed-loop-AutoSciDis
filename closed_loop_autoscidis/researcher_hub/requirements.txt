@@ -5,3 +5,4 @@ autora[experimentalist-nuts]
 autora[experiment-runner-firebase-prolific]
 sweetbean
 sweetpea
+textdistance

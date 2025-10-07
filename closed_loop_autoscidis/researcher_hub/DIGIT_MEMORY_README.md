@@ -26,7 +26,12 @@ Contains two main functions:
 
 Contains the `digit_memory_to_experiment_data()` function that converts raw trial data into a pandas DataFrame with:
 - **Independent variable**: `n_digits` (number of digits shown)
-- **Dependent variable**: `accuracy` (0 or 1, whether the response was correct)
+- **Dependent variable**: `accuracy` (normalized Damerau-Levenshtein similarity between 0 and 1)
+
+The accuracy is calculated using the normalized Damerau-Levenshtein similarity between the shown digits and the participant's response, where:
+- 1.0 = perfect match (all digits correct in correct order)
+- 0.0 = completely different
+- Values between 0 and 1 = partial similarity (some digits correct or transposed)
 
 ### `autora_workflow.py`
 

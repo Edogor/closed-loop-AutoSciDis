@@ -8,7 +8,7 @@ A complete digit memory experiment is now integrated into your closed-loop AutoR
 
 - **What it measures**: Memory span for digit sequences
 - **Independent Variable**: `n_digits` (3-9) - how many digits are shown
-- **Dependent Variable**: `accuracy` (0 or 1) - whether the participant was correct
+- **Dependent Variable**: `accuracy` (0.0 to 1.0) - normalized Damerau-Levenshtein similarity between shown and recalled digits
 - **Duration**: ~30-60 seconds per participant (depends on number of trials)
 
 ## How to Deploy
@@ -94,11 +94,13 @@ After running, you'll get:
 
 Typical pattern: As `n_digits` increases, `accuracy` decreases (it's harder to remember more digits).
 
-Example:
-- 3 digits: ~90% accuracy
-- 5 digits: ~70% accuracy
-- 7 digits: ~40% accuracy
-- 9 digits: ~20% accuracy
+Example (using Damerau-Levenshtein similarity):
+- 3 digits: ~0.90 accuracy (high similarity, occasional errors)
+- 5 digits: ~0.70 accuracy (moderate similarity, some errors)
+- 7 digits: ~0.40 accuracy (lower similarity, many errors)
+- 9 digits: ~0.20 accuracy (low similarity, mostly errors)
+
+The accuracy score now reflects partial credit - for example, if a participant remembers 4 out of 5 digits correctly, they'll get an accuracy around 0.80 instead of 0.0.
 
 The theoretical models will capture this relationship and predict where to collect more data.
 
@@ -147,7 +149,7 @@ The digit memory experiment replaces the previous dots comparison experiment:
 | Aspect | Dots Experiment | Digit Memory |
 |--------|----------------|--------------|
 | IVs | dots_left, dots_right (2D) | n_digits (1D) |
-| DV | accuracy (equal/unequal) | accuracy (correct recall) |
+| DV | accuracy (equal/unequal) | accuracy (similarity score 0.0-1.0) |
 | Display | Visual dots | Text digits |
 | Task | Comparison | Memory recall |
 | Duration | 2 seconds | 5 seconds |
