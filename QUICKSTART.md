@@ -54,12 +54,12 @@ python autora_workflow.py
 ```
 
 The workflow will:
-1. Generate initial experiment conditions (random n_digits values)
+1. Generate initial experiment conditions using nuts experimentalist
 2. Upload experiments to Firebase
 3. Wait for participants to complete them
 4. Download and preprocess the data
 5. Fit three theoretical models (Nuts, BMS, Logistic)
-6. Use model disagreement to select new conditions
+6. Use nuts experimentalist to select new conditions
 7. Repeat for the configured number of cycles
 
 ## Configuration
@@ -133,7 +133,7 @@ See the detailed documentation in:
 
 ## Key Features
 
-✅ **Closed-Loop**: Automatically generates new conditions based on model disagreement  
+✅ **Closed-Loop**: Automatically generates new conditions using nuts experimentalist  
 ✅ **Multi-Model**: Compares Nuts, BMS, and Logistic Regression  
 ✅ **Firebase-Ready**: Deploys to web for online data collection  
 ✅ **Real-Time Feedback**: Participants see if they're correct immediately  

@@ -2,7 +2,7 @@
 Basic Workflow — Digit Memory
     One Independent Variable (n_digits), One Dependent Variable (accuracy)
     Theorist: Nuts, Bayesian Machine Scientist, Logistic Regression
-    Experimentalist: Random init + Model Disagreement
+    Experimentalist: Nuts (for both initialization and model-based sampling)
     Runner: Firebase Runner (no prolific recruitment)
 """
 
@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 from autora.variable import VariableCollection, Variable
 from autora.theorist.bms import BMSRegressor
 from autora.experimentalist.grid import grid_pool
-from autora.experimentalist.random import random_sample
-from autora.experimentalist.model_disagreement import model_disagreement_sample
 from autora.experiment_runner.firebase_prolific import firebase_runner
 from autora.state import StandardState, on_state, Delta
 
@@ -33,29 +31,16 @@ try:
 except Exception:
     from autora.theorist.nuts import NutsTheorists as NutsRegressor  # fallback
 
-# ---- Use your experimentalist if available; fallback to the example signature ----
-try:
-    from autora.experimentalist.nuts import nuts_sample as _nuts_sample
+# ---- Always use nuts experimentalist ----
+from autora.experimentalist.nuts import nuts_sample as _nuts_sample
 
-    def pick_conditions(allowed, existing, ivs, models, k):
-        return _nuts_sample(
-            allowed_conditions=allowed,
-            existing_conditions=existing,
-            num_samples=k,
-            feature_cols=ivs,
-        )
-except ModuleNotFoundError:
-    from autora.experimentalist.autora_experimentalist_example import sample as _fallback_sample
-
-    def pick_conditions(allowed, existing, ivs, models, k):
-        ref = (existing[ivs] if existing is not None and not existing.empty
-               else allowed.iloc[0:0][ivs])
-        return _fallback_sample(
-            conditions=allowed[ivs],
-            models=models,
-            reference_conditions=ref,
-            num_samples=k,
-        )
+def pick_conditions(allowed, existing, ivs, models, k):
+    return _nuts_sample(
+        allowed_conditions=allowed,
+        existing_conditions=existing,
+        num_samples=k,
+        feature_cols=ivs,
+    )
 
 
 
@@ -130,8 +115,11 @@ def theorist_on_state(experiment_data, variables):
 
 # ------------- Experimentalists -------------
 @on_state()
-def initialize_state(allowed_conditions, num_samples):
-    return Delta(conditions=random_sample(allowed_conditions, num_samples))
+def initialize_state(allowed_conditions, num_samples, variables):
+    ivs = [iv.name for iv in variables.independent_variables]
+    existing = pd.DataFrame(columns=ivs)
+    chosen = pick_conditions(allowed_conditions, existing, ivs, None, num_samples)
+    return Delta(conditions=chosen.reset_index(drop=True))
 
 @on_state()
 def experimentalist_on_state(allowed_conditions, experiment_data, variables, models_to_compare, num_samples):
@@ -190,7 +178,8 @@ def runner_on_state(conditions):
 # ------------- Workflow loop -------------
 state = initialize_state(
     state, allowed_conditions=allowed_conditions,
-    num_samples=num_conditions_per_cycle
+    num_samples=num_conditions_per_cycle,
+    variables=variables
 )
 
 for _ in range(num_cycles):

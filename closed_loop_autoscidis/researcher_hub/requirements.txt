@@ -1,6 +1,7 @@
 autora-core
 autora[theorist-bms]
-autora[experimentalist-model-disagreement]
+autora[theorist-nuts]
+autora[experimentalist-nuts]
 autora[experiment-runner-firebase-prolific]
 sweetbean
 sweetpea
